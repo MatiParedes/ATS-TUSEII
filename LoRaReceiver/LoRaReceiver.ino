@@ -13,19 +13,19 @@
 #include <HTTPClient.h>
 #include <ArduinoJson.h> // Para construir el JSON fácilmente
 
-// --- Configuración Wi-Fi ---
+// Configuración Wi-Fi
 const char* ssid = "WiFi UNS";
 const char* password = "";
 // -------------------------------------------------
 
-// --- Configuración Firebase---
+// Configuración Firebase
 // Ve a tu Realtime Database -> Copia la URL
 // Debe terminar en ".firebaseio.com"
-// Añade "/nombre_nodo.json" al final. (Ej: "/datos.json")
+// "/nombre_nodo.json" al final
 String firebaseURL = "https://loraesp32-tuseii-default-rtdb.firebaseio.com/datosLoRa.json";
 // Va a almacenar los valores en datosLoRa
 
-// --- Configuración de Radio (DEBE COINCIDIR CON EL TX) ---
+// Configuración de Radio (DEBE COINCIDIR CON EL TX)
 uint32_t frecuencia = 915E6; 
 const int spreadingFactor = 7;
 const int bandwidth = 0;
@@ -35,7 +35,7 @@ const bool crc = true;
 // -------------------------------------------------
 
 // Declaración de la función que sube los datos
-void procesarYSubirDatos(byte datosRecibidos);
+void processAndUpload(byte datosRecibidos);
 
 static RadioEvents_t RadioEvents;
 
@@ -59,7 +59,7 @@ void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr) {
     Serial.println(byteRecibido, BIN);
 
     // Llama a la función para procesar y subir a Firebase
-    procesarYSubirDatos(byteRecibido);
+    processAndUpload(byteRecibido);
     
   } else {
     Serial.print("Error: Paquete de tamaño inesperado (");
@@ -133,7 +133,7 @@ void loop() {
 }
 
 // --- Función de Procesamiento y Subida ---
-void procesarYSubirDatos(byte datosRecibidos) {
+void processAndUpload(byte datosRecibidos) {
   
   // 1. --- Desempaquetado de Datos y Creación de JSON ---
   // Usamos ArduinoJson
