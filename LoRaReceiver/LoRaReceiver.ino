@@ -46,14 +46,16 @@ int16_t rssi,rxSize;
 bool lora_idle = true;
 
 // Callback: se llama cuando un paquete LoRa es recibido
-void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr) {
+void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr)
+{
   Serial.print("\nRX Done. RSSI: ");
   Serial.print(rssi);
   Serial.print(", SNR: ");
   Serial.println(snr);
 
   // Verificamos que el paquete tenga el tamaño esperado (1 byte)
-  if (size == 1) {
+  if (size == 1)
+  {
     byte byteRecibido = payload[0];
     Serial.print("Byte recibido por LoRa: 0b");
     Serial.println(byteRecibido, BIN);
@@ -61,7 +63,9 @@ void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr) {
     // Llama a la función para procesar y subir a Firebase
     processAndUpload(byteRecibido);
     
-  } else {
+  } 
+  else
+  {
     Serial.print("Error: Paquete de tamaño inesperado (");
     Serial.print(size);
     Serial.println(" bytes)");
@@ -72,22 +76,26 @@ void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr) {
 }
 
 // Callback: se llama si la recepción falla (timeout)
-void OnRxTimeout(void) {
+void OnRxTimeout(void)
+{
   Serial.println("RX Timeout");
   // Vuelve a poner la radio en modo Recepción Continua
   Radio.Rx(0);
 }
 
-void OnRxError(void) {
+void OnRxError(void)
+{
   Serial.println("RX Error");
   // Vuelve a poner la radio en modo Recepción Continua
   Radio.Rx(0);
 }
 
-void setup() {
+void setup()
+{
   Serial.begin(115200);
-  while (!Serial) {
-    ; // esperar
+  while (!Serial)
+  {
+    // esperar
   }
   
   Serial.println("Heltec V3.2 - Receptor LoRa P2P / Gateway Firebase");
@@ -99,7 +107,8 @@ void setup() {
   Serial.print("Conectando a Wi-Fi: ");
   Serial.println(ssid);
   WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
+  while (WiFi.status() != WL_CONNECTED)
+  {
     delay(500);
     Serial.print(".");
   }
@@ -114,10 +123,7 @@ void setup() {
 
   // Configura la radio para P2P (modo RX)
   Radio.SetChannel(frecuencia);
-  Radio.SetRxConfig(MODEM_LORA, bandwidth, spreadingFactor,
-                    codingRate, 0, preambleLength,
-                    0, false, 0, crc,
-                    0, 0, false, true); // (último true = RX Continua)
+  Radio.SetRxConfig(MODEM_LORA, bandwidth, spreadingFactor, codingRate, 0, preambleLength, 0, false, 0, crc, 0, 0, false, true); // (último true = RX Continua)
 
   // Le dice a la librería que no estamos usando una red pública
   Radio.SetPublicNetwork(false); 
@@ -127,14 +133,15 @@ void setup() {
   Radio.Rx(0); 
 }
 
-void loop() {
+void loop() 
+{
   // La radio necesita ser procesada en cada ciclo
   Radio.IrqProcess();
 }
 
 // --- Función de Procesamiento y Subida ---
-void processAndUpload(byte datosRecibidos) {
-  
+void processAndUpload(byte datosRecibidos)
+{
   // 1. --- Desempaquetado de Datos y Creación de JSON ---
   // Usamos ArduinoJson
   // Asigna un tamaño de memoria. 256 bytes es suficiente.
@@ -142,15 +149,19 @@ void processAndUpload(byte datosRecibidos) {
 
   Serial.println("Desempaquetando byte y creando JSON...");
 
-  for (int i = 0; i < 8; i++) {
+  for (int i = 0; i < 8; i++)
+  {
     // Crea la clave (ej: "coil_1", "coil_2", ...)
     String clave = "coil_" + String(i + 1);
 
     // Lee el bit en la posición 'i' del byte recibido
     // bitRead(variable, posicion) -> devuelve 0 (false) o 1 (true)
-    if (bitRead(datosRecibidos, i)) {
+    if (bitRead(datosRecibidos, i))
+    {
       doc[clave] = 1;
-    } else {
+    }
+    else
+    {
       doc[clave] = 0;
     }
   }
@@ -163,7 +174,8 @@ void processAndUpload(byte datosRecibidos) {
   Serial.println(jsonString);
 
   // 2. --- Envío a Firebase ---
-  if (WiFi.status() == WL_CONNECTED) {
+  if (WiFi.status() == WL_CONNECTED)
+  {
     HTTPClient http;
 
     Serial.println("Iniciando HTTP POST a Firebase...");
@@ -174,19 +186,25 @@ void processAndUpload(byte datosRecibidos) {
     // Realiza la petición POST con el string JSON
     int httpCode = http.POST(jsonString); 
 
-    if (httpCode > 0) {
+    if (httpCode > 0)
+    {
       Serial.print("Respuesta de Firebase: ");
       Serial.println(httpCode);
       String payload = http.getString();
       Serial.println(payload);
-    } else {
+    }
+    else
+    {
       Serial.print("Error en POST HTTP: ");
       Serial.println(httpCode);
     }
 
     http.end(); // Libera los recursos
     
-  } else {
+  }
+  else
+  {
     Serial.println("Error: Wi-Fi no conectado. No se pueden subir los datos.");
+    //Este error deberia notificarse con luz indicadora
   }
 }
