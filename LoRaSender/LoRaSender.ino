@@ -55,10 +55,12 @@ void OnTxTimeout(void)
   txIniciada = false;
 }
 
-void setup() {
+void setup()
+{
   // Inicia el Serial para depuración
   Serial.begin(115200);
-  while (!Serial) {
+  while (!Serial)
+  {
     // esperar
   }
   
@@ -90,14 +92,17 @@ void setup() {
   Serial.println("Radio TX lista. Esperando byte por MODBUS...");
 }
 
-void loop() {
+void loop()
+{
   // La radio necesita ser procesada en cada ciclo
   Radio.IrqProcess();
 
   // Si no estamos ya transmitiendo
-  if (txIniciada == false) {
+  if (txIniciada == false)
+  {
     // Revisa si hay un byte disponible
-    if (Serial1.available() > 0) {
+    if (Serial1.available() > 0)
+    {
       byte byteDelArduino = Serial1.read();
       
       Serial.print("Byte recibido: 0b");

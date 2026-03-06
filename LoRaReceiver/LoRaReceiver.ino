@@ -200,7 +200,6 @@ void processAndUpload(byte datosRecibidos)
     }
 
     http.end(); // Libera los recursos
-    
   }
   else
   {
