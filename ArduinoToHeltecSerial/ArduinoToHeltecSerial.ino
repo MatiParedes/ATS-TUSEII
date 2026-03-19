@@ -8,7 +8,8 @@ byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
 IPAddress ip(192, 168, 0, 17);        // Arduino IP
 IPAddress server(192, 168, 0, 201);    // Modbus slave simulator IP
 
-SoftwareSerial SerialToESP(30, 31); // le pongo los pines que quiero, RX y TX en ese orden
+//SoftwareSerial SerialToESP(30, 31); // le pongo los pines que quiero, RX y TX en ese orden
+
 
 EthernetClient ethClient;
 ModbusTCPClient modbusTCPClient(ethClient); //comando principal para enviar comandos Modbus
@@ -16,7 +17,7 @@ ModbusTCPClient modbusTCPClient(ethClient); //comando principal para enviar coma
 void setup()
 {
   Serial.begin(9600);
-  SerialToESP.begin(9600); //inicializo el serial virtual
+  Serial1.begin(9600); //inicializo el serial virtual
   while (!Serial);
   
   // Ethernet
@@ -81,7 +82,7 @@ void loop()
   //  Serial.print(bitRead(empaquetado, b));
   //  Serial.println();
 
-    SerialToESP.write(empaquetado); //mando crudo el dato
+    Serial1.write(empaquetado); //mando crudo el dato
   
   delay(10000);
 }

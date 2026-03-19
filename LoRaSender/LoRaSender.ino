@@ -78,10 +78,9 @@ void setup()
   txNumber = 0;
   
   // Configura los callbacks de la radio
-  Radio.Init(&RadioEvents); // Usamos NULL porque manejaremos los callbacks manualmente
   RadioEvents.TxDone = OnTxDone;
   RadioEvents.TxTimeout = OnTxTimeout;
-
+  Radio.Init(&RadioEvents); // Usamos NULL porque manejaremos los callbacks manualmente
   // Configura la radio para P2P
   Radio.SetChannel(frecuencia);
   Radio.SetTxConfig(MODEM_LORA, txPower, 0, bandwidth, spreadingFactor, codingRate, preambleLength, false, crc, 0, 0, false, 3000); // Timeout de 3 seg
