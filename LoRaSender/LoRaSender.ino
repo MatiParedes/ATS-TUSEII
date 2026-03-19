@@ -58,7 +58,7 @@ void OnTxTimeout(void)
 void setup()
 {
   // Inicia el Serial para depuración
-  Serial.begin(115200);
+  Serial.begin(9600);
   while (!Serial)
   {
     // esperar
@@ -68,7 +68,7 @@ void setup()
   // Mismo baudrate (9600)
   // ESP32-S3 (Heltec V3) pines por defecto para Serial1:
   // RX = 47, TX = 48
-  Serial1.begin(115200, SERIAL_8N1, 47, 48);
+  Serial1.begin(9600, SERIAL_8N1, 47, 48);
 
   Serial.println("Heltec V3.3 - Transmisor LoRa P2P");
 

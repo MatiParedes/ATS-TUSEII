@@ -8,7 +8,7 @@ byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
 IPAddress ip(192, 168, 0, 17);        // Arduino IP
 IPAddress server(192, 168, 0, 201);    // Modbus slave simulator IP
 
-SoftwareSerial SerialToESP(31, 30); // le pongo los pines que quiero, RX y TX en ese orden
+SoftwareSerial SerialToESP(30, 31); // le pongo los pines que quiero, RX y TX en ese orden
 
 EthernetClient ethClient;
 ModbusTCPClient modbusTCPClient(ethClient); //comando principal para enviar comandos Modbus
@@ -37,7 +37,7 @@ void setup()
 
 void loop()
 { //aca vemos si esta conectado, si no, intentamos conectar
-  if (!modbusTCPClient.connected()
+  if (!modbusTCPClient.connected())
   {
     Serial.println("Conectando al server Modbus...");
     

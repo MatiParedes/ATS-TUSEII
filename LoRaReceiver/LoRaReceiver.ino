@@ -14,8 +14,8 @@
 #include <ArduinoJson.h> // Para construir el JSON fácilmente
 
 // Configuración Wi-Fi
-const char* ssid = "WiFi UNS";
-const char* password = "";
+const char* ssid = "Matute";
+const char* password = "martincito";
 // -------------------------------------------------
 
 // Configuración Firebase
@@ -116,10 +116,10 @@ void setup()
   Serial.println(WiFi.localIP());
 
   // Configura los callbacks de la radio
-  Radio.Init(&RadioEvents);
   RadioEvents.RxDone = OnRxDone;
   RadioEvents.RxTimeout = OnRxTimeout;
   RadioEvents.RxError = OnRxError;
+  Radio.Init(&RadioEvents);
 
   // Configura la radio para P2P (modo RX)
   Radio.SetChannel(frecuencia);
@@ -179,11 +179,13 @@ void processAndUpload(byte datosRecibidos)
     HTTPClient http;
 
     Serial.println("Iniciando HTTP POST a Firebase...");
+    Serial.println(firebaseURL);
     http.begin(firebaseURL);
     // Firebase necesita este encabezado para saber que es JSON
     http.addHeader("Content-Type", "application/json"); 
 
     // Realiza la petición POST con el string JSON
+    // Si usamos PUT, se sobreescribe el dato anterior, util para Stay Alive
     int httpCode = http.POST(jsonString); 
 
     if (httpCode > 0)
