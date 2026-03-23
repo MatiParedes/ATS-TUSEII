@@ -1,8 +1,8 @@
 #include "LoRaWan_APP.h"
 #include "Arduino.h"
 
-// Configuración de Radio
-// Definimos la frecuencia para TX y RX, tiene que ser la misma
+//Configuración de Radio
+//Definimos la frecuencia para TX y RX, tiene que ser la misma
 uint32_t frecuencia = 915E6; 
 #define RF_FREQUENCY                                915000000 // Hz
 
@@ -24,31 +24,30 @@ double txNumber;
 bool lora_idle=true;
 
 static RadioEvents_t RadioEvents;
-void OnTxDone( void );
-void OnTxTimeout( void );
+void OnTxDone(void);
+void OnTxTimeout(void);
 
-// Parámetros P2P de LoRa
+//Parámetros P2P de LoRa
 const int txPower = -2;          // Potencia de transmisión (dBm)
 const int spreadingFactor = 7;   // (SF7 a SF12)
 const int bandwidth = 0;         // 0=125KHz, 1=250KHz, 2=500KHz
 const int codingRate = 1;        // 1=4/5, 2=4/6, 3=4/7, 4=4/8
 const int preambleLength = 8;
-const bool crc = true;           // Activar verificación por CRC
-// -------------------------------------------------
+const bool crc = true;           // Activar verificación por CRC, asi estaba en la documentación
 
-// Buffer para enviar datos
+//Buffer para enviar datos
 static uint8_t txBuffer[1]; // Solo necesitamos enviar 1 byte
 static bool txIniciada = false;
 
-// Callback: se llama cuando la transmisión LoRa termina
+//Callbacks que se llaman cuando termina la transmisión LoRa
 void OnTxDone(void)
 {
   Serial.println("TX Done");
   txIniciada = false;
-  // No necesitamos poner la radio en RX, es solo TX
+  //El sender solamente lo envía, no recibe instrucciones en esta versión
 }
 
-// Callback: se llama si la transmisión falla (timeout)
+//Callback: se llama si la transmisión falla (timeout)
 void OnTxTimeout(void)
 {
   Serial.println("TX Timeout");
@@ -57,49 +56,43 @@ void OnTxTimeout(void)
 
 void setup()
 {
-  // Inicia el Serial para depuración
+  //Usamos este Serial para debuggear, leer mensajitos en consola, etc.
   Serial.begin(9600);
-  while (!Serial)
-  {
-    // esperar
-  }
+  while (!Serial) {}
   
-  // Inicia Serial1 para comunicarse con el Arduino Mega
-  // Mismo baudrate (9600)
-  // ESP32-S3 (Heltec V3) pines por defecto para Serial1:
-  // RX = 47, TX = 48
+  //Iniciamos Serial1 para comunicarse con el Arduino Mega
+  //Mismo baudrate (9600)
+  //RX = 47, TX = 48, pines para Serial1 del Heltec
   Serial1.begin(9600, SERIAL_8N1, 47, 48);
 
-  Serial.println("Heltec V3.3 - Transmisor LoRa P2P");
-
-  // Inicia la placa y la radio
+  //Inicia la placa y la radio
   Mcu.begin(HELTEC_BOARD,SLOW_CLK_TPYE);
 
   txNumber = 0;
   
-  // Configura los callbacks de la radio
+  //Callbacks de LoRa
   RadioEvents.TxDone = OnTxDone;
   RadioEvents.TxTimeout = OnTxTimeout;
-  Radio.Init(&RadioEvents); // Usamos NULL porque manejaremos los callbacks manualmente
-  // Configura la radio para P2P
-  Radio.SetChannel(frecuencia);
-  Radio.SetTxConfig(MODEM_LORA, txPower, 0, bandwidth, spreadingFactor, codingRate, preambleLength, false, crc, 0, 0, false, 3000); // Timeout de 3 seg
+  Radio.Init(&RadioEvents); //Manejamos los callbacks manualmente igual
 
-  // Le dice a la librería que no estamos usando una red pública LoRaWAN
-  Radio.SetPublicNetwork(false); 
+  //Configuración de LoRa P2P
+  Radio.SetChannel(frecuencia);
+  Radio.SetTxConfig(MODEM_LORA, txPower, 0, bandwidth, spreadingFactor, codingRate, preambleLength, false, crc, 0, 0, false, 3000); //Timeout de 3 sec
+
+  Radio.SetPublicNetwork(false); //No usamos mesh
   
-  Serial.println("Radio TX lista. Esperando byte por MODBUS...");
+  Serial.println("Radio TX lista. Esperando byte...");
 }
 
 void loop()
 {
-  // La radio necesita ser procesada en cada ciclo
+  //La radio se procesa cada ciclo
   Radio.IrqProcess();
 
-  // Si no estamos ya transmitiendo
+  //Si no estamos ya transmitiendo
   if (txIniciada == false)
   {
-    // Revisa si hay un byte disponible
+    //Revisa si hay un byte disponible o algo
     if (Serial1.available() > 0)
     {
       byte byteDelArduino = Serial1.read();
@@ -107,10 +100,10 @@ void loop()
       Serial.print("Byte recibido: 0b");
       Serial.println(byteDelArduino, BIN);
 
-      // Prepara el buffer de transmisión
+      //Prepara el buffer de transmisión
       txBuffer[0] = byteDelArduino;
       
-      // Inicia la transmisión
+      //Inicia la transmisión
       Serial.println("Iniciando transmisión LoRa...");
       Radio.Send(txBuffer, 1); // Envía el buffer de 1 byte
       txIniciada = true;

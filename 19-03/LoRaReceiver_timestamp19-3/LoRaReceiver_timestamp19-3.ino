@@ -1,38 +1,37 @@
-#include "LoRaWan_APP.h"
+#include "LoRaWan_APP.h" //Maneja comunicación LoRa
 #include "Arduino.h"
 #include <WiFi.h>
-#include <HTTPClient.h>
-#include <ArduinoJson.h>
-#include <time.h>  // Para NTP
+#include <HTTPClient.h> //Para Firebase
+#include <ArduinoJson.h> //Manejo de json para Firebase
+#include <time.h> //Para coordinar NTP
 
-// Configuración Wi-Fi
-const char* ssid     = "Matute";
+//WiFi, idealmente esto se haría desde una interfaz de usuario configurable
+const char* ssid = "Matute";
 const char* password = "martincito";
 
-// Configuración Firebase
+//URL de la base de datos en Firebase
 String firebaseBase = "https://loraesp32-tuseii-default-rtdb.firebaseio.com";
 
-// Configuración NTP
-const char* ntpServer    = "pool.ntp.org";
-const long  gmtOffset    = -10800;  // UTC-3 (Argentina) en segundos
-const int   daylightOffset = 0;
+//NTP
+const char* ntpServer = "pool.ntp.org";
+const long gmtOffset = -10800;  // UTC-3 en segundos
+const int daylightOffset = 0;
 
-// Configuración de Radio
+//Configuración de LoRa
 uint32_t frecuencia = 915E6;
 const int spreadingFactor = 7;
-const int bandwidth       = 0;
-const int codingRate      = 1;
-const int preambleLength  = 8;
-const bool crc            = true;
+const int bandwidth = 0;
+const int codingRate = 1;
+const int preambleLength = 8;
+const bool crc = true;
 
-// Declaraciones
 void processAndUpload(byte datosRecibidos);
 String getTimestamp();
 int getHistorialCount();
 
 static RadioEvents_t RadioEvents;
 
-// ── Callbacks LoRa ──────────────────────────────────────────
+//LoRa, callbacks y reporte de error en Serial
 void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr)
 {
   Serial.print("\nRX Done. RSSI: ");
@@ -74,11 +73,11 @@ void setup()
   Serial.begin(115200);
   while (!Serial) {}
 
-  Serial.println("Heltec V3.2 - Receptor LoRa / Gateway Firebase");
+  Serial.println("Receptor LoRa / Gateway Firebase");
 
   Mcu.begin(HELTEC_BOARD, SLOW_CLK_TPYE);
 
-  // Conectar Wi-Fi
+  //WiFi
   Serial.print("Conectando a Wi-Fi...");
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED)
@@ -89,11 +88,10 @@ void setup()
   Serial.println("\nWi-Fi conectado. IP: ");
   Serial.println(WiFi.localIP());
 
-  // Sincronizar NTP
+  //Sincronizado de NTP
   Serial.println("Sincronizando hora con NTP...");
   configTime(gmtOffset, daylightOffset, ntpServer);
 
-  // Esperar a que la hora esté disponible
   struct tm timeinfo;
   while (!getLocalTime(&timeinfo))
   {
@@ -103,28 +101,24 @@ void setup()
   Serial.println("Hora sincronizada:");
   Serial.println(&timeinfo, "%Y-%m-%d %H:%M:%S");
 
-  // Configurar radio
-  RadioEvents.RxDone    = OnRxDone;
+  RadioEvents.RxDone = OnRxDone;
   RadioEvents.RxTimeout = OnRxTimeout;
-  RadioEvents.RxError   = OnRxError;
+  RadioEvents.RxError = OnRxError;
   Radio.Init(&RadioEvents);
 
   Radio.SetChannel(frecuencia);
-  Radio.SetRxConfig(MODEM_LORA, bandwidth, spreadingFactor, codingRate,
-                    0, preambleLength, 0, false, 0, crc, 0, 0, false, true);
+  Radio.SetRxConfig(MODEM_LORA, bandwidth, spreadingFactor, codingRate, 0, preambleLength, 0, false, 0, crc, 0, 0, false, true);
   Radio.SetPublicNetwork(false);
 
   Serial.println("Radio RX lista. Esperando paquetes LoRa...");
   Radio.Rx(0);
 }
 
-// ── Loop ────────────────────────────────────────────────────
 void loop()
 {
   Radio.IrqProcess();
 }
 
-// ── Obtener timestamp legible ────────────────────────────────
 String getTimestamp()
 {
   struct tm timeinfo;
@@ -134,16 +128,14 @@ String getTimestamp()
   }
 
   char buffer[30];
-  // Formato: 2026-03-19_14-35-22
+
   strftime(buffer, sizeof(buffer), "%Y-%m-%d_%H-%M-%S", &timeinfo);
   return String(buffer);
 }
 
-// ── Obtener cantidad de entradas en historial ────────────────
 int getHistorialCount()
 {
   HTTPClient http;
-  // Firebase permite pedir solo las claves con ?shallow=true
   String url = firebaseBase + "/historial.json?shallow=true";
   http.begin(url);
   int httpCode = http.GET();
@@ -170,11 +162,9 @@ int getHistorialCount()
   return count;
 }
 
-// ── Obtener la clave más antigua del historial ───────────────
 String getOldestKey()
 {
   HTTPClient http;
-  // Pide solo el primer elemento ordenado por clave
   String url = firebaseBase + "/historial.json?orderBy=\"$key\"&limitToFirst=1";
   http.begin(url);
   http.addHeader("Content-Type", "application/json");
@@ -189,8 +179,6 @@ String getOldestKey()
   String response = http.getString();
   http.end();
 
-  // El formato es {"2026-03-19_14-00-00":{...}}
-  // Extraemos la primera clave
   int start = response.indexOf('"') + 1;
   int end   = response.indexOf('"', start);
 
@@ -199,17 +187,17 @@ String getOldestKey()
   return response.substring(start, end);
 }
 
-// ── Procesar y subir a Firebase ──────────────────────────────
+//Firebase
 void processAndUpload(byte datosRecibidos)
 {
-  // Construir JSON con los coils
+  //Construye JSON con los coils
   StaticJsonDocument<256> doc;
   for (int i = 0; i < 8; i++)
   {
     String clave = "coil_" + String(i + 1);
     doc[clave]   = bitRead(datosRecibidos, i) ? 1 : 0;
   }
-  // Agregar timestamp dentro del documento también
+
   doc["timestamp"] = getTimestamp();
 
   String jsonString;
@@ -227,7 +215,9 @@ void processAndUpload(byte datosRecibidos)
   HTTPClient http;
   int httpCode;
 
-  // ── 1. Subir a ultimo_dato (PUT, siempre sobreescribe) ──
+  //PUT sobreescribe el ultimo dato
+  //El otro que usabamos lo sumaba
+
   Serial.println("Subiendo ultimo_dato...");
   http.begin(firebaseBase + "/ultimo_dato.json");
   http.addHeader("Content-Type", "application/json");
@@ -236,7 +226,6 @@ void processAndUpload(byte datosRecibidos)
   Serial.println(httpCode);
   http.end();
 
-  // ── 2. Verificar si hay que borrar el más antiguo ────────
   int count = getHistorialCount();
   Serial.print("Entradas en historial: ");
   Serial.println(count);
@@ -257,7 +246,6 @@ void processAndUpload(byte datosRecibidos)
     }
   }
 
-  // ── 3. Subir al historial (PUT con timestamp como clave) ─
   String timestamp = getTimestamp();
   Serial.print("Subiendo historial en: ");
   Serial.println(timestamp);

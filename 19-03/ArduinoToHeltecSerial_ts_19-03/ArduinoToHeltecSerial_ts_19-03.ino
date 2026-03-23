@@ -2,24 +2,23 @@
 #include <Ethernet.h>
 #include <ArduinoModbus.h>
 
-// Configuración de red
-byte mac[]          = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
-IPAddress ip        (192, 168, 0, 17);
-IPAddress server    (192, 168, 0, 201);
+//Config de la red
+byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
+IPAddress ip (192, 168, 0, 17);
+IPAddress server (192, 168, 0, 201);
 
-EthernetClient   ethClient;
-ModbusTCPClient  modbusTCPClient(ethClient);
+EthernetClient ethClient;
+ModbusTCPClient modbusTCPClient(ethClient);
 
-// Control de envío
-byte estadoAnterior           = 255;       // Valor imposible → fuerza envío inicial
-unsigned long ultimoEnvio     = 0;
-const unsigned long INTERVALO_ALIVE = 3600000; // 1 hora en ms
+//Control de envío
+byte estadoAnterior = 255;
+unsigned long ultimoEnvio = 0;
+const unsigned long INTERVALO_ALIVE = 3600000; //ms
 
-// ── Setup ───────────────────────────────────────────────────
 void setup()
 {
   Serial.begin(9600);
-  Serial1.begin(9600);   // TX1 → pin 18 → Heltec GPIO 47
+  Serial1.begin(9600);   // TX1 pin 18 en ardu → Heltec pin 47
 
   while (!Serial) {}
 
@@ -35,20 +34,19 @@ void setup()
     Serial.println("Error con el cable Ethernet");
   }
 
-  Serial.println("Cliente ModbusTCP listo!");
+  Serial.println("Cliente Modbus listo!");
 }
 
-// ── Loop ────────────────────────────────────────────────────
 void loop()
 {
-  // Reconexión automática si se pierde el servidor Modbus
+  //Reconexión automática
   if (!modbusTCPClient.connected())
   {
     Serial.println("Conectando al servidor Modbus...");
 
     if (!modbusTCPClient.begin(server, 502))
     {
-      Serial.println("Falló la conexión, reintentando en 5s...");
+      Serial.println("Falló la conexión, reintentando...");
       delay(5000);
       return;
     }
@@ -56,7 +54,7 @@ void loop()
     Serial.println("Conectado al servidor Modbus!");
   }
 
-  // Leer y empaquetar los 8 coils
+  //Lee y empaqueta los 8 coils
   byte empaquetado = 0;
   bool errorLectura = false;
 
@@ -80,29 +78,28 @@ void loop()
     }
   }
 
-  Serial.println("-----------------------");
-
-  // Si hubo error en algún coil, no enviamos para no mandar datos corruptos
+  // Si hubo error en algún coil, no se envía
   if (errorLectura)
   {
-    Serial.println("Error en lectura, no se envía.");
+    Serial.println("Error en lectura, no se envía");
     delay(500);
     return;
   }
 
-  unsigned long ahora    = millis();
-  bool huboCambio        = (empaquetado != estadoAnterior);
-  bool pasaUnaHora       = (ahora - ultimoEnvio >= INTERVALO_ALIVE);
+  unsigned long ahora = millis();
+  bool dataChange = (empaquetado != estadoAnterior);
+  bool aliveTime = (ahora - ultimoEnvio >= INTERVALO_ALIVE); 
+  //aliveTime es modificable por el usuario. Es el tiempo entre envíos de "control" para corroborar que el sistema de comunicación sigue conectado
 
-  if (huboCambio)
+  if (dataChange)
   {
     Serial.print("Cambio detectado! Enviando: 0b");
     Serial.println(empaquetado, BIN);
     Serial1.write(empaquetado);
     estadoAnterior = empaquetado;
-    ultimoEnvio    = ahora;
+    ultimoEnvio = ahora;
   }
-  else if (pasaUnaHora)
+  else if (aliveTime)
   {
     Serial.print("Sin cambios - I'm alive. Enviando: 0b");
     Serial.println(empaquetado, BIN);
@@ -111,8 +108,8 @@ void loop()
   }
   else
   {
-    Serial.println("Sin cambios, no se envía.");
+    Serial.println("Sin cambios, no se envía nada.");
   }
 
-  delay(500); // Polling cada 500ms
+  delay(500); //ms
 }
